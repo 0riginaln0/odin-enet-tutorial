@@ -2,10 +2,17 @@ package server
 
 import shared "../shared"
 import "core:fmt"
+import "core:mem"
 import "core:strings"
 import enet "vendor:ENet"
 
 main :: proc() {
+    track: mem.Tracking_Allocator; mem.tracking_allocator_init(&track, context.allocator)
+    temp_track: mem.Tracking_Allocator; mem.tracking_allocator_init(&temp_track, context.temp_allocator)
+    context.allocator = mem.tracking_allocator(&track)
+    context.temp_allocator = mem.tracking_allocator(&temp_track)
+    defer shared.review_tracking_allocators(&track, &temp_track)
+
     if enet.initialize() != 0 {
         fmt.println("An error occured while initializing ENet!")
         return
