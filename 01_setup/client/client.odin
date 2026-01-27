@@ -38,7 +38,7 @@ main :: proc() {
         fmt.printfln("Connection to %s succeed", shared.format_enet_address(address))
     } else {
         enet.peer_reset(peer)
-        fmt.println("Connection to %s failed", shared.format_enet_address(address))
+        fmt.printfln("Connection to %s failed", shared.format_enet_address(address))
         return
     }
 
