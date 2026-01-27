@@ -32,11 +32,12 @@ main :: proc() {
     }
     defer enet.host_destroy(server)
 
-    rl.InitWindow(321, 321, "serv")
     event: enet.Event
-    for !rl.WindowShouldClose() {
-        rl.BeginDrawing()
-        rl.EndDrawing()
+    // I use raylib window because I want to see the result of defer shared.review_tracking_allocators(&track, &temp_track)
+    rl.InitWindow(321, 321, "serv") // And I'm too lazy to handle cross-platform CTRL+C signal
+    for !rl.WindowShouldClose() {     // You can just replace this line with `for {`
+        rl.BeginDrawing() // and completely comment out
+        rl.EndDrawing() // raylib-related lines
         if enet.host_service(server, &event, 0) <= 0 do continue
 
         #partial switch event.type {
