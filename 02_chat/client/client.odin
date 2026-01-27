@@ -292,17 +292,13 @@ main :: proc() {
             for i := len(messages) - 1; i >= start_index; i -= 1 {
                 msg := messages[i]
                 if len(msg) > 0 {
-                    // Wrap text if it's too long
-                    wrapped_text := strings.clone_to_cstring(msg)
-                    text_width := rl.MeasureText(wrapped_text, 18)
-
                     // Calculate text position (right-aligned to show newest at bottom)
                     text_y := message_y - (f32(len(messages) - 1 - i) * line_height)
 
                     // Don't draw if text is above the chat history area
                     if text_y >= chat_history_rect.y {
                         rl.DrawText(
-                            wrapped_text,
+                            strings.clone_to_cstring(msg),
                             i32(chat_history_rect.x + 10),
                             i32(text_y),
                             18,
