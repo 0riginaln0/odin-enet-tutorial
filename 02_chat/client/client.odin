@@ -55,9 +55,17 @@ main :: proc() {
     message_builder: strings.Builder
     strings.builder_init(&nickname_builder, 0, 32)
     strings.builder_init(&message_builder, 0, 256)
-
+    defer {
+        strings.builder_destroy(&nickname_builder)
+        strings.builder_destroy(&message_builder)
+    }
     messages: [dynamic]string
-    defer delete(messages)
+    defer {
+        for msg in messages {
+            delete(msg)
+        }
+        delete(messages)
+    }
 
     nickname_active := false
     message_active := false
@@ -289,7 +297,6 @@ main :: proc() {
                 }
             }
         } else {
-
             rl.DrawText(
                 "No messages yet. Start chatting!",
                 i32(chat_history_rect.x + 10),
@@ -321,11 +328,7 @@ main :: proc() {
         free_all(context.temp_allocator)
     }
 
-    strings.builder_destroy(&nickname_builder)
-    strings.builder_destroy(&message_builder)
-
     disconnect_from_server(client, peer, &event)
-
     rl.CloseWindow()
 }
 
