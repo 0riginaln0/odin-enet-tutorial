@@ -195,6 +195,8 @@ main :: proc() {
 
         nickname_text := strings.to_string(nickname_builder)
         message_text := strings.to_string(message_builder)
+        nickname_cstr := strings.clone_to_cstring(nickname_text, context.temp_allocator)
+        message_cstr := strings.clone_to_cstring(message_text, context.temp_allocator)
 
         rl.BeginScissorMode(
             i32(nickname_rect.x),
@@ -203,7 +205,7 @@ main :: proc() {
             i32(nickname_rect.height),
         )
         rl.DrawText(
-            strings.clone_to_cstring(nickname_text),
+            nickname_cstr,
             i32(nickname_rect.x + 10),
             i32(nickname_rect.y + 10),
             20,
@@ -217,13 +219,7 @@ main :: proc() {
             i32(message_rect.width),
             i32(message_rect.height),
         )
-        rl.DrawText(
-            strings.clone_to_cstring(message_text),
-            i32(message_rect.x + 10),
-            i32(message_rect.y + 10),
-            20,
-            rl.WHITE,
-        )
+        rl.DrawText(message_cstr, i32(message_rect.x + 10), i32(message_rect.y + 10), 20, rl.WHITE)
         rl.EndScissorMode()
 
         button_color := rl.Color{80, 80, 80, 255}
@@ -239,8 +235,12 @@ main :: proc() {
             rl.WHITE,
         )
 
+        nickname_counter := fmt.tprintf("%d/20", len(nickname_text))
+        message_counter := fmt.tprintf("%d/50", len(message_text))
+        nickname_counter_cstr := strings.clone_to_cstring(nickname_counter, context.temp_allocator)
+        message_counter_cstr := strings.clone_to_cstring(message_counter, context.temp_allocator)
         rl.DrawText(
-            strings.clone_to_cstring(fmt.tprintf("%d/20", len(nickname_text))),
+            nickname_counter_cstr,
             i32(nickname_rect.x + nickname_rect.width - 60),
             i32(nickname_rect.y + nickname_rect.height + 5),
             16,
@@ -248,7 +248,7 @@ main :: proc() {
         )
 
         rl.DrawText(
-            strings.clone_to_cstring(fmt.tprintf("%d/50", len(message_text))),
+            message_counter_cstr,
             i32(message_rect.x + message_rect.width - 60),
             i32(message_rect.y + message_rect.height + 5),
             16,
