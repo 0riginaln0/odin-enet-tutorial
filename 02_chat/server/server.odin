@@ -59,6 +59,9 @@ main :: proc() {
                 event.channelID,
             )
             msg := strings.string_from_ptr(event.packet.data, int(event.packet.dataLength))
+            // enet.packet_create() will memcpy the data we provided. (unless .NO_ALLOCATE flag provided)
+            // hence it's safe to destroy the event.packet we raw_getting the data from
+            // https://github.com/lsalzman/enet/blob/8be2368a8001f28db44e81d5939de5e613025023/packet.c#L41
             packet := enet.packet_create(raw_data(msg), event.packet.dataLength, {.RELIABLE})
             enet.host_broadcast(server, 0, packet)
 

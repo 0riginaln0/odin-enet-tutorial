@@ -91,6 +91,7 @@ main :: proc() {
                     shared.format_enet_address(event.peer.address),
                     event.channelID,
                 )
+                // We clone the memory from incoming packet, because we must destroy tha received packet.
                 msg := strings.clone(
                     strings.string_from_ptr(event.packet.data, int(event.packet.dataLength)),
                 )
@@ -117,6 +118,9 @@ main :: proc() {
                     warning_timer = 2.0
                 } else if len(message) > 0 {
                     full_message := fmt.tprintf("%s: %s", nickname, message)
+                    // enet.packet_create() will memcpy the data we provided. (unless .NO_ALLOCATE flag provided)
+                    // hence it's safe to use temporarly allocated `full_message`
+                    // https://github.com/lsalzman/enet/blob/8be2368a8001f28db44e81d5939de5e613025023/packet.c#L41
                     packet := enet.packet_create(
                         raw_data(full_message),
                         len(full_message),
@@ -125,6 +129,8 @@ main :: proc() {
                     enet.peer_send(peer, 0, packet)
                     strings.builder_reset(&message_builder)
                     fmt.println("Sent message:", full_message)
+                    // Mention, that we don't need to enet.packet_destroy() packet that we are creating&sending.
+                    // The ENet library will destroy the packet automatically on its own.
                 }
             }
         }
@@ -335,7 +341,12 @@ main :: proc() {
 }
 
 disconnect_from_server :: proc(my_host: ^enet.Host, server_peer: ^enet.Peer, event: ^enet.Event) {
+    // Try to disconnect gently. A disconnect request will be sent to the foreign host
+    // and ENet will wait for an acknowledgement from the foreign host
+    // before finally disconnecting. An event of type .DISCONNECT will be generated once
+    // the disconnection succeeds.
     enet.peer_disconnect(server_peer, 0)
+    // Wait to receive the disconnection acknowledgement
     WAITING_FOR :: 3 * time.Second
     started_waiting := time.tick_now()
     remaining := (WAITING_FOR - time.tick_since(started_waiting))
@@ -351,5 +362,10 @@ disconnect_from_server :: proc(my_host: ^enet.Host, server_peer: ^enet.Peer, eve
         }
         remaining = (WAITING_FOR - time.tick_since(started_waiting))
     }
+    // We got no disconnection acknowledgement within the 3 seconds
+    //
+    // Forcefully disconnect a peer.
+    // The foreign host will get no notification of a disconnect
+    // and will time out on the foreign host. No event is generated
     enet.peer_reset(server_peer)
 }
