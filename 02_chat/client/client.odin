@@ -2,6 +2,7 @@ package client
 
 import shared "../shared"
 import "core:fmt"
+import "core:strings"
 import "core:time"
 import enet "vendor:ENet"
 import rl "vendor:raylib"
@@ -33,8 +34,6 @@ main :: proc() {
 
     event: enet.Event
     if enet.host_service(client, &event, 5000) > 0 && event.type == .CONNECT {
-        // Only the "peer" field of the event structure is valid for this event
-        // and contains the newly connected peer.
         fmt.printfln("Connection to %s succeed", shared.format_enet_address(address))
     } else {
         enet.peer_reset(peer)
@@ -42,50 +41,254 @@ main :: proc() {
         return
     }
 
-    rl.InitWindow(500, 500, "Chat client")
+    rl.InitWindow(800, 600, "Chat client")
     rl.SetTargetFPS(rl.GetMonitorRefreshRate(rl.GetCurrentMonitor()))
+
+    // Initialize GUI
+    nickname_builder: strings.Builder
+    message_builder: strings.Builder
+    strings.builder_init(&nickname_builder, 0, 32) // Reserve space for 32 chars
+    strings.builder_init(&message_builder, 0, 256) // Reserve space for 256 chars
+
+    nickname_active := false
+    message_active := false
+    show_warning := false
+    warning_timer: f32 = 0.0
+
+    // Define UI rectangles
+    nickname_rect := rl.Rectangle{50, 50, 400, 40}
+    message_rect := rl.Rectangle{50, 120, 600, 40}
+    send_button_rect := rl.Rectangle{50, 300, 200, 40}
+
     quit := false
     for !rl.WindowShouldClose() && !quit {
+        // Handle network events
         if enet.host_service(client, &event, 0) > 0 {
             #partial switch event.type {
             case .RECEIVE:
-                // The packet contained in the "packet" field must be destroyed
-                // with enet_packet_destroy() when you are done inspecting its contents.
                 fmt.printf(
                     "A packet of length %d containing %s was received from %s on channel %d.\n",
                     event.packet.dataLength,
                     event.packet.data,
-                    event.peer.data,
+                    shared.format_enet_address(event.peer.address),
                     event.channelID,
                 )
+                // Put the packet.data into the messages dynamic array
                 enet.packet_destroy(event.packet)
+            case .DISCONNECT:
+                fmt.println("Disconnected from server")
+                quit = true
             }
         }
 
-        if rl.IsKeyPressed(.D) {
-            disconnect_from_server(client, peer, &event)
-            quit = true
+        // Handle GUI input
+        if rl.IsMouseButtonPressed(.LEFT) {
+            mouse_pos := rl.GetMousePosition()
+
+            // Check which text area is clicked
+            nickname_active = rl.CheckCollisionPointRec(mouse_pos, nickname_rect)
+            message_active = rl.CheckCollisionPointRec(mouse_pos, message_rect)
+
+            // Check if send button is clicked
+            if rl.CheckCollisionPointRec(mouse_pos, send_button_rect) {
+                // Send message to server
+                nickname := strings.to_string(nickname_builder)
+                message := strings.to_string(message_builder)
+
+                if len(nickname) == 0 {
+                    show_warning = true
+                    warning_timer = 2.0 // Show warning for 2 seconds
+                } else if len(message) > 0 {
+                    // Create message string
+                    full_message := fmt.tprintf("%s: %s", nickname, message)
+
+                    // Create and send packet
+                    packet := enet.packet_create(
+                        raw_data(full_message),
+                        len(full_message),
+                        {.RELIABLE},
+                    )
+                    enet.peer_send(peer, 0, packet)
+
+                    // Clear message builder
+                    strings.builder_reset(&message_builder)
+
+                    fmt.println("Sent message:", full_message)
+                }
+            }
         }
 
+        // Handle keyboard input for active text area
+        if nickname_active || message_active {
+            key := rl.GetCharPressed()
+            for key > 0 {
+                // Only accept ASCII characters (0-127)
+                if key <= 127 {
+                    builder: ^strings.Builder
+                    max_len: int
+
+                    if nickname_active {
+                        builder = &nickname_builder
+                        max_len = 20
+                    } else {
+                        builder = &message_builder
+                        max_len = 50
+                    }
+
+                    // Check if we haven't reached the max length
+                    if strings.builder_len(builder^) < max_len {
+                        strings.write_rune(builder, rune(key))
+                    }
+                }
+                key = rl.GetCharPressed()
+            }
+
+            // Handle backspace
+            if rl.IsKeyPressed(.BACKSPACE) {
+                builder: ^strings.Builder
+                if nickname_active {
+                    builder = &nickname_builder
+                } else {
+                    builder = &message_builder
+                }
+
+                if strings.builder_len(builder^) > 0 {
+                    // Remove last character
+                    bytes := builder.buf
+                    if len(bytes) > 0 {
+                        strings.builder_reset(builder)
+                        strings.write_bytes(builder, bytes[:len(bytes) - 1])
+                    }
+                }
+            }
+        }
+
+        // Update warning timer
+        if show_warning {
+            warning_timer -= rl.GetFrameTime()
+            if warning_timer <= 0 {
+                show_warning = false
+            }
+        }
+
+        // Draw everything
         rl.BeginDrawing()
         rl.ClearBackground({18, 18, 18, 255})
 
-        rl.DrawText("Press D to disconnect", 190, 200, 20, rl.WHITE)
+        // Draw labels
+        rl.DrawText("Nickname:", i32(nickname_rect.x), i32(nickname_rect.y - 25), 20, rl.WHITE)
+        rl.DrawText("Message:", i32(message_rect.x), i32(message_rect.y - 25), 20, rl.WHITE)
+
+        // Draw text areas
+        rl.DrawRectangleRec(nickname_rect, {40, 40, 40, 255})
+        rl.DrawRectangleRec(message_rect, {40, 40, 40, 255})
+
+        // Draw borders for active/inactive state
+        border_color := nickname_active ? rl.BLUE : rl.GRAY
+        rl.DrawRectangleLinesEx(nickname_rect, 2, border_color)
+
+        border_color = message_active ? rl.BLUE : rl.GRAY
+        rl.DrawRectangleLinesEx(message_rect, 2, border_color)
+
+        // Draw text content
+        nickname_text := strings.to_string(nickname_builder)
+        message_text := strings.to_string(message_builder)
+
+        // Enable scissor mode for text display to handle long messages
+        rl.BeginScissorMode(
+            i32(nickname_rect.x),
+            i32(nickname_rect.y),
+            i32(nickname_rect.width),
+            i32(nickname_rect.height),
+        )
+        rl.DrawText(
+            strings.clone_to_cstring(nickname_text),
+            i32(nickname_rect.x + 10),
+            i32(nickname_rect.y + 10),
+            20,
+            rl.WHITE,
+        )
+        rl.EndScissorMode()
+
+        rl.BeginScissorMode(
+            i32(message_rect.x),
+            i32(message_rect.y),
+            i32(message_rect.width),
+            i32(message_rect.height),
+        )
+        rl.DrawText(
+            strings.clone_to_cstring(message_text),
+            i32(message_rect.x + 10),
+            i32(message_rect.y + 10),
+            20,
+            rl.WHITE,
+        )
+        rl.EndScissorMode()
+
+        // Draw send button
+        button_color := rl.Color{80, 80, 80, 255}
+        if rl.CheckCollisionPointRec(rl.GetMousePosition(), send_button_rect) {
+            button_color = {100, 100, 100, 255}
+        }
+        rl.DrawRectangleRec(send_button_rect, button_color)
+        rl.DrawText(
+            "Send Message",
+            i32(send_button_rect.x + 20),
+            i32(send_button_rect.y + 10),
+            20,
+            rl.WHITE,
+        )
+
+        // Draw character counters
+        rl.DrawText(
+            strings.clone_to_cstring(fmt.tprintf("%d/20", len(nickname_text))),
+            i32(nickname_rect.x + nickname_rect.width - 60),
+            i32(nickname_rect.y + nickname_rect.height + 5),
+            16,
+            rl.GRAY,
+        )
+
+        rl.DrawText(
+            strings.clone_to_cstring(fmt.tprintf("%d/50", len(message_text))),
+            i32(message_rect.x + message_rect.width - 60),
+            i32(message_rect.y + message_rect.height + 5),
+            16,
+            rl.GRAY,
+        )
+
+        // Draw warning if needed
+        if show_warning {
+            rl.DrawRectangle(50, 350, 500, 40, {255, 50, 50, 200})
+            rl.DrawText("Please enter a nickname before sending!", 60, 360, 20, rl.WHITE)
+        }
+
+        // Draw connection status
+        rl.DrawText(
+            strings.clone_to_cstring(
+                fmt.tprintf("Connected to: %s", shared.format_enet_address(address)),
+            ),
+            400,
+            550,
+            16,
+            rl.GREEN,
+        )
 
         rl.EndDrawing()
+
         free_all(context.temp_allocator)
     }
-    rl.CloseWindow()
 
+    // Cleanup builders
+    strings.builder_destroy(&nickname_builder)
+    strings.builder_destroy(&message_builder)
+
+    disconnect_from_server(client, peer, &event)
+
+    rl.CloseWindow()
 }
 
 disconnect_from_server :: proc(my_host: ^enet.Host, server_peer: ^enet.Peer, event: ^enet.Event) {
-    // Try to disconnect gently. A disconnect request will be sent to the foreign host
-    // and ENet will wait for an acknowledgement from the foreign host
-    // before finally disconnecting. An event of type .DISCONNECT will be generated once
-    // the disconnection succeeds.
     enet.peer_disconnect(server_peer, 0)
-    // Wait to receive the disconnection acknowledgement
     WAITING_FOR :: 3 * time.Second
     started_waiting := time.tick_now()
     remaining := (WAITING_FOR - time.tick_since(started_waiting))
@@ -101,10 +304,5 @@ disconnect_from_server :: proc(my_host: ^enet.Host, server_peer: ^enet.Peer, eve
         }
         remaining = (WAITING_FOR - time.tick_since(started_waiting))
     }
-    // We got no disconnection acknowledgement within the 3 seconds
-    //
-    // Forcefully disconnect a peer.
-    // The foreign host will get no notification of a disconnect
-    // and will time out on the foreign host. No event is generated
     enet.peer_reset(server_peer)
 }

@@ -42,10 +42,11 @@ main :: proc() {
                 "A packet of length %d containing %s was received from %s on channel %d.\n",
                 event.packet.dataLength,
                 event.packet.data,
-                event.peer.data,
+                shared.format_enet_address(event.peer.address),
                 event.channelID,
             )
-            enet.packet_destroy(event.packet)
+            enet.host_broadcast(server, 0, event.packet)
+        // enet.packet_destroy(event.packet)
         case .DISCONNECT:
             // Only the "peer" field of the event structure is valid for this event
             fmt.printfln(
