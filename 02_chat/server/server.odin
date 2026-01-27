@@ -2,6 +2,7 @@ package server
 
 import shared "../shared"
 import "core:fmt"
+import "core:strings"
 import enet "vendor:ENet"
 
 main :: proc() {
@@ -45,8 +46,13 @@ main :: proc() {
                 shared.format_enet_address(event.peer.address),
                 event.channelID,
             )
-            enet.host_broadcast(server, 0, event.packet)
-        // enet.packet_destroy(event.packet)
+            msg := strings.clone(
+                strings.string_from_ptr(event.packet.data, int(event.packet.dataLength)),
+            )
+            packet := enet.packet_create(raw_data(msg), event.packet.dataLength, {.RELIABLE})
+            enet.host_broadcast(server, 0, packet)
+
+            enet.packet_destroy(event.packet)
         case .DISCONNECT:
             // Only the "peer" field of the event structure is valid for this event
             fmt.printfln(

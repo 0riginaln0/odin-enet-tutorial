@@ -50,6 +50,9 @@ main :: proc() {
     strings.builder_init(&nickname_builder, 0, 32) // Reserve space for 32 chars
     strings.builder_init(&message_builder, 0, 256) // Reserve space for 256 chars
 
+    messages: [dynamic]string
+    defer delete(messages)
+
     nickname_active := false
     message_active := false
     show_warning := false
@@ -58,7 +61,8 @@ main :: proc() {
     // Define UI rectangles
     nickname_rect := rl.Rectangle{50, 50, 400, 40}
     message_rect := rl.Rectangle{50, 120, 600, 40}
-    send_button_rect := rl.Rectangle{50, 300, 200, 40}
+    send_button_rect := rl.Rectangle{550, 50, 200, 40}
+    chat_history_rect := rl.Rectangle{50, 230, 700, 320}
 
     quit := false
     for !rl.WindowShouldClose() && !quit {
@@ -73,7 +77,10 @@ main :: proc() {
                     shared.format_enet_address(event.peer.address),
                     event.channelID,
                 )
-                // Put the packet.data into the messages dynamic array
+                msg := strings.clone(
+                    strings.string_from_ptr(event.packet.data, int(event.packet.dataLength)),
+                )
+                append(&messages, msg)
                 enet.packet_destroy(event.packet)
             case .DISCONNECT:
                 fmt.println("Disconnected from server")
@@ -255,6 +262,67 @@ main :: proc() {
             16,
             rl.GRAY,
         )
+
+        // Draw chat history
+        rl.DrawRectangleRec(chat_history_rect, {25, 25, 25, 255})
+        rl.DrawRectangleLinesEx(chat_history_rect, 2, rl.GRAY)
+        // Draw chat history label
+        rl.DrawText(
+            "Chat History",
+            i32(chat_history_rect.x),
+            i32(chat_history_rect.y - 25),
+            20,
+            rl.WHITE,
+        )
+        // Draw messages in chat history
+        rl.BeginScissorMode(
+            i32(chat_history_rect.x),
+            i32(chat_history_rect.y),
+            i32(chat_history_rect.width),
+            i32(chat_history_rect.height),
+        )
+        y_offset: f32 = 10
+        line_height: f32 = 24
+
+        // Draw messages from newest to oldest (from bottom up)
+        if len(messages) > 0 {
+            start_index := max(0, len(messages) - 12) // Show last 12 messages
+            message_y := chat_history_rect.y + chat_history_rect.height - 20
+
+            for i := len(messages) - 1; i >= start_index; i -= 1 {
+                msg := messages[i]
+                if len(msg) > 0 {
+                    // Wrap text if it's too long
+                    wrapped_text := strings.clone_to_cstring(msg)
+                    text_width := rl.MeasureText(wrapped_text, 18)
+
+                    // Calculate text position (right-aligned to show newest at bottom)
+                    text_y := message_y - (f32(len(messages) - 1 - i) * line_height)
+
+                    // Don't draw if text is above the chat history area
+                    if text_y >= chat_history_rect.y {
+                        rl.DrawText(
+                            wrapped_text,
+                            i32(chat_history_rect.x + 10),
+                            i32(text_y),
+                            18,
+                            rl.WHITE,
+                        )
+                    }
+                }
+            }
+        } else {
+            // Show "No messages yet" when chat is empty
+            rl.DrawText(
+                "No messages yet. Start chatting!",
+                i32(chat_history_rect.x + 10),
+                i32(chat_history_rect.y + 10),
+                18,
+                rl.GRAY,
+            )
+        }
+
+        rl.EndScissorMode()
 
         // Draw warning if needed
         if show_warning {
