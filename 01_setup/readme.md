@@ -1,4 +1,8 @@
-This chapter shows a basic enet client-server setup
+This chapter shows a basic enet client-server setup.
+
+- setting up server
+- handling incoming requests
+- connect & disconnect from the server
 
 Build & Run:
 
