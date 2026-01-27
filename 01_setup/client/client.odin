@@ -2,6 +2,7 @@ package client
 
 import shared "../shared"
 import "core:fmt"
+import "core:time"
 import enet "vendor:ENet"
 import rl "vendor:raylib"
 
@@ -62,7 +63,6 @@ main :: proc() {
         }
 
         if rl.IsKeyPressed(.D) {
-            fmt.println("au go bb")
             disconnect_from_server(client, peer, &event)
             quit = true
         }
@@ -78,14 +78,31 @@ main :: proc() {
 }
 
 disconnect_from_server :: proc(my_host: ^enet.Host, server_peer: ^enet.Peer, event: ^enet.Event) {
+    // Try to disconnect gently. A disconnect request will be sent to the foreign host
+    // and ENet will wait for an acknowledgement from the foreign host
+    // before finally disconnecting. An event of type .DISCONNECT will be generated once
+    // the disconnection succeeds.
     enet.peer_disconnect(server_peer, 0)
-    for enet.host_service(my_host, event, 3000) > 0 {
-        #partial switch event.type {
-        case .RECEIVE:
-            enet.packet_destroy(event.packet)
-        case .DISCONNECT:
-            fmt.println("Disconnection succeeded")
-            return
+    // Wait to receive the disconnection acknowledgement
+    WAITING_FOR :: 3 * time.Second
+    started_waiting := time.tick_now()
+    remaining := (WAITING_FOR - time.tick_since(started_waiting))
+    for remaining > 0 {
+        if enet.host_service(my_host, event, u32(remaining / time.Millisecond)) > 0 {
+            #partial switch event.type {
+            case .RECEIVE:
+                enet.packet_destroy(event.packet)
+            case .DISCONNECT:
+                fmt.println("Disconnection succeeded")
+                return
+            }
+            remaining = (WAITING_FOR - time.tick_since(started_waiting))
         }
     }
+    // We got no disconnection acknowledgement within the 3 seconds
+    //
+    // Forcefully disconnect a peer.
+    // The foreign host will get no notification of a disconnect
+    // and will time out on the foreign host. No event is generated
+    enet.peer_reset(server_peer)
 }
