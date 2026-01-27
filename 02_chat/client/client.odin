@@ -286,8 +286,9 @@ main :: proc() {
                     text_y := message_y - (f32(len(messages) - 1 - i) * line_height)
 
                     if text_y >= chat_history_rect.y {
+                        msg_cstr := strings.clone_to_cstring(msg, context.temp_allocator)
                         rl.DrawText(
-                            strings.clone_to_cstring(msg),
+                            msg_cstr,
                             i32(chat_history_rect.x + 10),
                             i32(text_y),
                             18,
@@ -316,6 +317,7 @@ main :: proc() {
         rl.DrawText(
             strings.clone_to_cstring(
                 fmt.tprintf("Connected to: %s", shared.format_enet_address(address)),
+                context.temp_allocator,
             ),
             400,
             550,
