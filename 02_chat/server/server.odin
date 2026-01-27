@@ -5,6 +5,7 @@ import "core:fmt"
 import "core:mem"
 import "core:strings"
 import enet "vendor:ENet"
+import rl "vendor:raylib"
 
 main :: proc() {
     track: mem.Tracking_Allocator; mem.tracking_allocator_init(&track, context.allocator)
@@ -31,8 +32,11 @@ main :: proc() {
     }
     defer enet.host_destroy(server)
 
+    rl.InitWindow(321, 321, "serv")
     event: enet.Event
-    for {
+    for !rl.WindowShouldClose() {
+        rl.BeginDrawing()
+        rl.EndDrawing()
         if enet.host_service(server, &event, 0) <= 0 do continue
 
         #partial switch event.type {
@@ -70,4 +74,5 @@ main :: proc() {
 
         free_all(context.temp_allocator)
     }
+    rl.CloseWindow()
 }
