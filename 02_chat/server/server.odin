@@ -53,9 +53,7 @@ main :: proc() {
                 shared.format_enet_address(event.peer.address),
                 event.channelID,
             )
-            msg := strings.clone(
-                strings.string_from_ptr(event.packet.data, int(event.packet.dataLength)),
-            )
+            msg := strings.string_from_ptr(event.packet.data, int(event.packet.dataLength))
             packet := enet.packet_create(raw_data(msg), event.packet.dataLength, {.RELIABLE})
             enet.host_broadcast(server, 0, packet)
 
