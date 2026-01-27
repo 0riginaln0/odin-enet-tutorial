@@ -96,8 +96,8 @@ disconnect_from_server :: proc(my_host: ^enet.Host, server_peer: ^enet.Peer, eve
                 fmt.println("Disconnection succeeded")
                 return
             }
-            remaining = (WAITING_FOR - time.tick_since(started_waiting))
         }
+        remaining = (WAITING_FOR - time.tick_since(started_waiting))
     }
     // We got no disconnection acknowledgement within the 3 seconds
     //
