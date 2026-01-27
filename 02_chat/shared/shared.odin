@@ -4,6 +4,7 @@ import "core:fmt"
 import "core:mem"
 import enet "vendor:ENet"
 
+// Creates a temporarly allocated string
 format_enet_address :: proc(addr: enet.Address) -> string {
     return fmt.tprintf(
         "%d.%d.%d.%d:%d",
