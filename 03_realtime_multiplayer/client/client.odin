@@ -31,4 +31,19 @@ main :: proc() {
     enet.address_set_host(&address, "127.0.0.1")
     address.port = 27585
 
+    peer: ^enet.Peer = enet.host_connect(client, &address, CHANNEL_LIMIT, 0)
+    if peer == nil {
+        fmt.println("Failed to initiate a connection to a foreign host")
+        return
+    }
+
+    rl.InitWindow(800, 600, "Chat client")
+    rl.SetTargetFPS(rl.GetMonitorRefreshRate(rl.GetCurrentMonitor()))
+    quit := false
+    for !rl.WindowShouldClose() && !quit {
+        rl.BeginDrawing()
+        rl.ClearBackground({18, 18, 18, 255})
+
+        rl.EndDrawing()
+    }
 }
