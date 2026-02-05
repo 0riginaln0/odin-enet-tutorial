@@ -67,6 +67,17 @@ main :: proc() {
 
             enet.packet_destroy(event.packet)
         case .DISCONNECT:
+            full_message := fmt.tprintf("USER %s disconnected", shared.format_enet_address(event.peer.address))
+            // enet.packet_create() will memcpy the data we provided. (unless .NO_ALLOCATE flag provided)
+            // hence it's safe to use temporarly allocated `full_message`
+            // https://github.com/lsalzman/enet/blob/8be2368a8001f28db44e81d5939de5e613025023/packet.c#L41
+            packet := enet.packet_create(
+                raw_data(full_message),
+                len(full_message),
+                {.RELIABLE},
+            )
+            enet.host_broadcast(server, 0, packet)
+            
             // Only the "peer" field of the event structure is valid for this event
             fmt.printfln(
                 "peer %s either explicitly disconnected or timed out",
