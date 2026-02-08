@@ -42,10 +42,42 @@ main :: proc() {
     rl.SetTargetFPS(rl.GetMonitorRefreshRate(rl.GetCurrentMonitor()))
     quit := false
 
-    for !rl.WindowShouldClose() && !quit {
-        rl.BeginDrawing()
-        rl.ClearBackground({18, 18, 18, 255})
+    input := common.Player_Input{}
 
-        rl.EndDrawing()
+    state := State.Disconnected
+    for !rl.WindowShouldClose() && !quit {
+
+        switch state {
+        case .Disconnected:
+            disconnected(&state)
+        case .Connected:
+            connected(&state, &input)
+        }
     }
+}
+
+State :: enum {
+    Disconnected,
+    Connected,
+}
+
+disconnected :: proc(state: ^State) {
+    rl.BeginDrawing()
+    rl.ClearBackground({18, 18, 18, 255})
+
+    rl.DrawText("Press C to connect to the server", 0, 0, 20, rl.WHITE)
+    rl.EndDrawing()
+}
+
+connected :: proc(state: ^State, input: ^common.Player_Input) {
+    input.buttons = {}
+    if rl.IsKeyDown(.W) do input.buttons += {.Up}
+    if rl.IsKeyDown(.S) do input.buttons += {.Down}
+    if rl.IsKeyDown(.A) do input.buttons += {.Left}
+    if rl.IsKeyDown(.D) do input.buttons += {.Right}
+
+    rl.BeginDrawing()
+    rl.ClearBackground({18, 18, 18, 255})
+    rl.DrawText("Press B to leave the server", 0, 0, 20, rl.WHITE)
+    rl.EndDrawing()
 }
