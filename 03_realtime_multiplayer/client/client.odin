@@ -78,6 +78,7 @@ connected :: proc(state: ^State, input: ^common.Player_Input) {
 
     rl.BeginDrawing()
     rl.ClearBackground({18, 18, 18, 255})
-    rl.DrawText("Press B to leave the server", 0, 0, 20, rl.WHITE)
+    rl.DrawText("> Press B to leave the server", 0, 0, 20, rl.WHITE)
+    rl.DrawText("> Use WASD to move around", 0, 20, 20, rl.WHITE)
     rl.EndDrawing()
 }
