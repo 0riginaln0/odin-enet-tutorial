@@ -1,17 +1,18 @@
 package client
 
-import "../shared"
 import "core:fmt"
 import "core:mem"
 import enet "vendor:ENet"
 import rl "vendor:raylib"
+
+import common "../common"
 
 main :: proc() {
     track: mem.Tracking_Allocator; mem.tracking_allocator_init(&track, context.allocator)
     temp_track: mem.Tracking_Allocator; mem.tracking_allocator_init(&temp_track, context.temp_allocator)
     context.allocator = mem.tracking_allocator(&track)
     context.temp_allocator = mem.tracking_allocator(&temp_track)
-    defer shared.review_tracking_allocators(&track, &temp_track)
+    defer common.review_tracking_allocators(&track, &temp_track)
 
     if enet.initialize() != 0 {
         fmt.println("An error occured while initializing ENet!")
@@ -40,6 +41,7 @@ main :: proc() {
     rl.InitWindow(800, 600, "Chat client")
     rl.SetTargetFPS(rl.GetMonitorRefreshRate(rl.GetCurrentMonitor()))
     quit := false
+
     for !rl.WindowShouldClose() && !quit {
         rl.BeginDrawing()
         rl.ClearBackground({18, 18, 18, 255})

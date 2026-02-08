@@ -1,6 +1,6 @@
 package server
 
-import shared "../shared"
+import common "../common"
 import "core:fmt"
 import enet "vendor:ENet"
 
@@ -33,7 +33,7 @@ main :: proc() {
             // and contains the newly connected peer.
             fmt.printfln(
                 "New client connected from %s",
-                shared.format_enet_address(event.peer.address),
+                common.format_enet_address(event.peer.address),
             )
         case .RECEIVE:
             // The packet contained in the "packet" field must be destroyed
@@ -50,7 +50,7 @@ main :: proc() {
             // Only the "peer" field of the event structure is valid for this event
             fmt.printfln(
                 "peer %s either explicitly disconnected or timed out",
-                shared.format_enet_address(event.peer.address),
+                common.format_enet_address(event.peer.address),
             )
             /* Reset the peer's client information. */
             event.peer.data = nil

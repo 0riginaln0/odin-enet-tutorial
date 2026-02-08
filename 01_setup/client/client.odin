@@ -1,6 +1,6 @@
 package client
 
-import shared "../shared"
+import common "../common"
 import "core:fmt"
 import "core:time"
 import enet "vendor:ENet"
@@ -35,10 +35,10 @@ main :: proc() {
     if enet.host_service(client, &event, 5000) > 0 && event.type == .CONNECT {
         // Only the "peer" field of the event structure is valid for this event
         // and contains the newly connected peer.
-        fmt.printfln("Connection to %s succeed", shared.format_enet_address(address))
+        fmt.printfln("Connection to %s succeed", common.format_enet_address(address))
     } else {
         enet.peer_reset(peer)
-        fmt.printfln("Connection to %s failed", shared.format_enet_address(address))
+        fmt.printfln("Connection to %s failed", common.format_enet_address(address))
         return
     }
 

@@ -1,4 +1,4 @@
-package shared
+package common
 
 import "core:fmt"
 import enet "vendor:ENet"

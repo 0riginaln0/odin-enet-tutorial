@@ -1,6 +1,6 @@
 package server
 
-import shared "../shared"
+import common "../common"
 import "core:fmt"
 import "core:mem"
 import "core:strings"
@@ -30,28 +30,6 @@ Player :: struct {
     buttons:  bit_set[Buttons],
     peer:     ^enet.Peer,
 }
-
-Server_To_Client_Message :: union {
-    World_Update,
-}
-World_Update :: World
-
-Client_To_Server_Message :: union {
-    Player_Input,
-    Chat_Message,
-}
-Player_Input :: struct {
-    id:      int,
-    buttons: bit_set[Buttons],
-}
-Chat_Message :: struct {
-    id:      int,
-    buttons: string,
-}
-Slot_Assignment :: struct {
-    index: u8,
-}
-
 Buttons :: enum {
     Up,
     Down,
@@ -69,7 +47,7 @@ main :: proc() {
     temp_track: mem.Tracking_Allocator; mem.tracking_allocator_init(&temp_track, context.temp_allocator)
     context.allocator = mem.tracking_allocator(&track)
     context.temp_allocator = mem.tracking_allocator(&temp_track)
-    defer shared.review_tracking_allocators(&track, &temp_track)
+    defer common.review_tracking_allocators(&track, &temp_track)
 
     if enet.initialize() != 0 {
         fmt.println("An error occured while initializing ENet!")
@@ -131,10 +109,7 @@ handle_incoming_events :: proc(server: ^enet.Host, world: ^World, event: ^enet.E
     case .CONNECT:
         // Only the "peer" field of the event structure is valid for this event
         // and contains the newly connected peer.
-        fmt.printfln(
-            "New client connected from %s",
-            shared.format_enet_address(event.peer.address),
-        )
+        fmt.printfln("New client connected from %s", common.format_enet_address(event.peer.address))
         if slot_id, found := find_free_slot(world); found {
             packet := enet.packet_create(&slot_id, size_of(u8), {})
             enet.peer_send(event.peer, u8(Channels.Reliable), packet)
@@ -148,7 +123,7 @@ handle_incoming_events :: proc(server: ^enet.Host, world: ^World, event: ^enet.E
             "A packet of length %d containing %s was received from %s on channel %d.\n",
             event.packet.dataLength,
             event.packet.data,
-            shared.format_enet_address(event.peer.address),
+            common.format_enet_address(event.peer.address),
             event.channelID,
         )
         msg := strings.string_from_ptr(event.packet.data, int(event.packet.dataLength))
@@ -167,10 +142,7 @@ handle_incoming_events :: proc(server: ^enet.Host, world: ^World, event: ^enet.E
             }
         }
         // Only the "peer" field of the event structure is valid for this event
-        fmt.printfln(
-            "peer %s either explicitly disconnected or timed out",
-            shared.format_enet_address(event.peer.address),
-        )
+        fmt.printfln("peer %s either explicitly disconnected or timed out", common.format_enet_address(event.peer.address))
         /* Reset the peer's client information. */
         event.peer.data = nil
     }

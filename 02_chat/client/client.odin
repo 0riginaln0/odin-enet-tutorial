@@ -1,6 +1,6 @@
 package client
 
-import shared "../shared"
+import common "../common"
 import "core:fmt"
 import "core:mem"
 import "core:strings"
@@ -13,7 +13,7 @@ main :: proc() {
     temp_track: mem.Tracking_Allocator; mem.tracking_allocator_init(&temp_track, context.temp_allocator)
     context.allocator = mem.tracking_allocator(&track)
     context.temp_allocator = mem.tracking_allocator(&temp_track)
-    defer shared.review_tracking_allocators(&track, &temp_track)
+    defer common.review_tracking_allocators(&track, &temp_track)
 
     if enet.initialize() != 0 {
         fmt.println("An error occured while initializing ENet!")
@@ -41,10 +41,10 @@ main :: proc() {
 
     event: enet.Event
     if enet.host_service(client, &event, 5000) > 0 && event.type == .CONNECT {
-        fmt.printfln("Connection to %s succeed", shared.format_enet_address(address))
+        fmt.printfln("Connection to %s succeed", common.format_enet_address(address))
     } else {
         enet.peer_reset(peer)
-        fmt.printfln("Connection to %s failed", shared.format_enet_address(address))
+        fmt.printfln("Connection to %s failed", common.format_enet_address(address))
         return
     }
 
@@ -88,7 +88,7 @@ main :: proc() {
                     "A packet of length %d containing %s was received from %s on channel %d.\n",
                     event.packet.dataLength,
                     event.packet.data,
-                    shared.format_enet_address(event.peer.address),
+                    common.format_enet_address(event.peer.address),
                     event.channelID,
                 )
                 // We clone the memory from incoming packet, because we must destroy tha received packet.
@@ -322,7 +322,7 @@ main :: proc() {
 
         rl.DrawText(
             strings.clone_to_cstring(
-                fmt.tprintf("Connected to: %s", shared.format_enet_address(address)),
+                fmt.tprintf("Connected to: %s", common.format_enet_address(address)),
                 context.temp_allocator,
             ),
             400,
