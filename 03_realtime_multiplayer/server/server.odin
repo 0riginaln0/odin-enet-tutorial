@@ -17,6 +17,7 @@ DOWN_BOUND :: 0 + WORLD_HEIGHT
 
 Game :: struct {
   world:      common.World,
+  prev_world: common.World,
   slot_peers: [common.MAX_PLAYERS_COUNT]^enet.Peer,
 }
 
@@ -67,6 +68,9 @@ main :: proc() {
     for ; accumulator >= DT; accumulator -= DT {
       world_update(&game.world)
 
+      if game.world == game.prev_world do continue
+      game.prev_world = game.world
+
       // Send updated world to connected peers
       world_msg: common.Server_To_Client_Message = game.world
       data, ok := common.encode_server_message(world_msg, context.temp_allocator)
@@ -105,36 +109,37 @@ handle_incoming_events :: proc(server: ^enet.Host, game: ^Game, event: ^enet.Eve
   #partial switch event.type {
   case .CONNECT:
     fmt.printfln("New client connected from %s", common.format_enet_address(event.peer.address))
-    if slot_id, found := find_free_slot(&game.world); found {
-      // Assign this peer to the free slot
-      game.slot_peers[slot_id] = event.peer
-
-      // Initialize the player data in the world
-      game.world.player_slots[slot_id] = common.Player {
-        color    = next_color(),
-        position = {0, 0},
-        buttons  = {},
-      }
-
-      // Send the slot assignment to the client
-      slot_msg: common.Server_To_Client_Message = common.Slot_Assignment(slot_id)
-      data, ok := common.encode_server_message(slot_msg, context.temp_allocator)
-      if !ok {
-        fmt.eprintln("Failed to encode slot assignment")
-        enet.peer_disconnect_now(event.peer, 1)
-        game.slot_peers[slot_id] = nil
-        game.world.player_slots[slot_id] = common.Free{}
-        break
-      }
-      packet := enet.packet_create(raw_data(data), len(data), {.RELIABLE})
-      enet.peer_send(event.peer, u8(common.Channels.Reliable), packet)
-
-      fmt.printfln("Assigned slot %d to peer", slot_id)
-    } else {
-      // No free slots, reject the connection
+    slot_id, found := find_free_slot(&game.world)
+    if !found {
+      fmt.println("SERVER IS FULL")
       enet.peer_disconnect_now(event.peer, 1)
+      return
     }
+    fmt.println("FOUND FREE SLOT")
+    game.slot_peers[slot_id] = event.peer
+
+    game.world.player_slots[slot_id] = common.Player {
+      color    = next_color(),
+      position = {WORLD_WIDTH / 2, WORLD_HEIGHT / 2},
+      buttons  = {},
+    }
+
+    // Send the slot assignment to the client
+    slot_msg: common.Server_To_Client_Message = common.Slot_Assignment(slot_id)
+    data, ok := common.encode_server_message(slot_msg, context.temp_allocator)
+    if !ok {
+      fmt.eprintln("Failed to encode slot assignment")
+      enet.peer_disconnect_now(event.peer, 1)
+      game.slot_peers[slot_id] = nil
+      game.world.player_slots[slot_id] = common.Free{}
+      return
+    }
+    packet := enet.packet_create(raw_data(data), len(data), {.RELIABLE})
+    enet.peer_send(event.peer, u8(common.Channels.Reliable), packet)
+    fmt.printfln("Assigned slot %d to peer", slot_id)
+
   case .RECEIVE:
+    fmt.println("RECEIVED SOMETHING")
     // The packet contained in the "packet" field must be destroyed
     // with enet_packet_destroy() when you are done inspecting its contents.
     defer enet.packet_destroy(event.packet)
@@ -150,7 +155,7 @@ handle_incoming_events :: proc(server: ^enet.Host, game: ^Game, event: ^enet.Eve
     slot_idx := slot_from_peer(game, event.peer)
     if slot_idx == -1 {
       fmt.printfln("Received message from unknown peer, ignoring")
-      break
+      return
     }
 
     // Decode the client message
@@ -160,7 +165,7 @@ handle_incoming_events :: proc(server: ^enet.Host, game: ^Game, event: ^enet.Eve
     )
     if !ok {
       fmt.eprintfln("Failed to decode client message from slot %d", slot_idx)
-      break
+      return
     }
 
     // Handle the message
@@ -182,6 +187,7 @@ handle_incoming_events :: proc(server: ^enet.Host, game: ^Game, event: ^enet.Eve
       }
     }
   case .DISCONNECT:
+    fmt.println("DISCONNECTED SOMEBODY")
     // Find the slot that used this peer
     slot_idx := slot_from_peer(game, event.peer)
     if slot_idx != -1 {
@@ -200,7 +206,10 @@ handle_incoming_events :: proc(server: ^enet.Host, game: ^Game, event: ^enet.Eve
 }
 
 find_free_slot :: proc(world: ^common.World) -> (u8, bool) {
+  fmt.println("Checking slots, length =", len(world.player_slots))
+
   for slot, i in world.player_slots {
+    fmt.println(slot)
     if _, is_free_slot := slot.(common.Free); is_free_slot do return u8(i), true
   }
   return 0, false

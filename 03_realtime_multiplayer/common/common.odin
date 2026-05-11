@@ -17,7 +17,7 @@ Server_To_Client_Message :: union {
   Chat_Message,
 }
 Chat_Message :: struct {
-  i: int,
+  i: u8,
   m: string,
 }
 World_Update :: World
@@ -44,7 +44,7 @@ World :: struct {
   player_slots: [MAX_PLAYERS_COUNT]Player_Slot,
 }
 
-Player_Slot :: union {
+Player_Slot :: union #no_nil {
   Free,
   Player,
 }
