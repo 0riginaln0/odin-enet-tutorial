@@ -21,10 +21,10 @@ odin run client
 | Field | Type | Valid For Events | Description |
 |-------|------|------------------|-------------|
 | `type` | `ENetEventType` | Always | The type of event that occurred (NONE, CONNECT, DISCONNECT, RECEIVE) [2](#0-1)  |
-| `peer` | `ENetPeer*` | CONNECT, DISCONNECT, RECEIVE | The peer that generated the event [3](#0-2)  |
-| `channelID` | `u8` | RECEIVE | The channel number on which the packet was received [4](#0-3)  |
-| `data` | `u32` | CONNECT, DISCONNECT | User-supplied data describing the event (0 if none available) [5](#0-4)  |
-| `packet` | `ENetPacket*` | RECEIVE | The packet that was received (must be destroyed with `enet_packet_destroy` after use) [6](#0-5)  |
+| `peer` | `ENetPeer*` | CONNECT, DISCONNECT, RECEIVE | The peer that generated the event  |
+| `channelID` | `u8` | RECEIVE | The channel number on which the packet was received  |
+| `data` | `u32` | CONNECT, DISCONNECT | User-supplied data describing the event (0 if none available)  |
+| `packet` | `ENetPacket*` | RECEIVE | The packet that was received (must be destroyed with `enet_packet_destroy` after use) |
 
 ### ENET_EVENT_TYPE_NONE
 - **Valid fields**: `type` only
