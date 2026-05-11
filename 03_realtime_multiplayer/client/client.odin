@@ -7,6 +7,8 @@ import rl "vendor:raylib"
 
 import common "../common"
 
+world: common.World
+
 main :: proc() {
     track: mem.Tracking_Allocator; mem.tracking_allocator_init(&track, context.allocator)
     temp_track: mem.Tracking_Allocator; mem.tracking_allocator_init(&temp_track, context.temp_allocator)
