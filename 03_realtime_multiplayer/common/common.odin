@@ -67,6 +67,34 @@ format_enet_address :: proc(addr: enet.Address) -> string {
   )
 }
 
+check_tracking_allocators :: proc(track, temp_track: ^mem.Tracking_Allocator) {
+  if len(track.allocation_map) > 0 {
+    fmt.eprintf("=== %v allocations not freed: ===\n", len(track.allocation_map))
+    for _, entry in track.allocation_map {
+      fmt.eprintf("- %v bytes @ %v\n", entry.size, entry.location)
+    }
+  }
+  if len(track.bad_free_array) > 0 {
+    fmt.eprintf("=== %v incorrect frees: ===\n", len(track.bad_free_array))
+    for entry in track.bad_free_array {
+      fmt.eprintf("- %p @ %v\n", entry.memory, entry.location)
+    }
+  }
+
+  if len(temp_track.allocation_map) > 0 {
+    fmt.eprintf("=== %v temp allocations not freed:!!! ===\n", len(temp_track.allocation_map))
+    for _, entry in temp_track.allocation_map {
+      fmt.eprintf("- %v bytes @ %v\n", entry.size, entry.location)
+    }
+  }
+  if len(temp_track.bad_free_array) > 0 {
+    fmt.eprintf("=== %v temp incorrect frees: ===\n", len(temp_track.bad_free_array))
+    for entry in temp_track.bad_free_array {
+      fmt.eprintf("- %p @ %v\n", entry.memory, entry.location)
+    }
+  }
+}
+
 review_tracking_allocators :: proc(track, temp_track: ^mem.Tracking_Allocator) {
   if len(track.allocation_map) > 0 {
     fmt.eprintf("=== %v allocations not freed: ===\n", len(track.allocation_map))

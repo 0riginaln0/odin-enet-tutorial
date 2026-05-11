@@ -2,6 +2,7 @@ package client
 
 import "core:fmt"
 import "core:mem"
+import "core:strings"
 import enet "vendor:ENet"
 import rl "vendor:raylib"
 
@@ -15,7 +16,13 @@ GameState :: enum {
 
 world: common.World
 slot_id: u8 // assigned by server
-peer: ^enet.Peer // saved for sending messages
+peer: ^enet.Peer // server peer
+
+Player_Message :: struct {
+  msg:       string,
+  timestamp: f64,
+}
+player_messages: [common.MAX_PLAYERS_COUNT]Player_Message
 
 main :: proc() {
   track: mem.Tracking_Allocator; mem.tracking_allocator_init(&track, context.allocator)
@@ -51,6 +58,7 @@ main :: proc() {
 
   state := GameState.Connecting
 
+  rl.SetConfigFlags({.WINDOW_RESIZABLE})
   rl.InitWindow(800, 600, "Game Client")
   rl.SetTargetFPS(rl.GetMonitorRefreshRate(rl.GetCurrentMonitor()))
   defer rl.CloseWindow()
@@ -98,13 +106,13 @@ main :: proc() {
           send_player_input(peer, input)
           prev_input = input
         }
-        if rl.IsKeyDown(.ONE) {
+        if rl.IsKeyPressed(.ONE) {
           send_player_message(peer, "Hello!")
         }
-        if rl.IsKeyDown(.TWO) {
+        if rl.IsKeyPressed(.TWO) {
           send_player_message(peer, "This game is awesome!")
         }
-        if rl.IsKeyDown(.THREE) {
+        if rl.IsKeyPressed(.THREE) {
           send_player_message(peer, "gtg bb")
         }
       }
@@ -130,6 +138,14 @@ handle_server_message :: proc(data: []byte) {
     world = v
   case common.Chat_Message:
     fmt.printfln("[Chat] Player %d: %s", v.i, v.m)
+    idx := v.i
+    if idx < common.MAX_PLAYERS_COUNT {
+      if player_messages[idx].msg != "" {
+        delete(player_messages[idx].msg)
+      }
+      player_messages[idx].msg = strings.clone(v.m, context.allocator)
+      player_messages[idx].timestamp = rl.GetTime()
+    }
   }
 }
 
@@ -187,11 +203,12 @@ connected :: proc() {
   rl.ClearBackground({18, 18, 18, 255})
   rl.DrawText("> Press B to leave the server", 0, 0, 20, rl.WHITE)
   rl.DrawText("> Use WASD to move around", 0, 20, 20, rl.WHITE)
+  rl.DrawText("> Use 1 2 3 to talk", 0, 40, 20, rl.WHITE)
 
   PLAYER_SIZE: f32 = 20.0
   half_size := PLAYER_SIZE / 2
 
-  for slot in world.player_slots {
+  for slot, idx in world.player_slots {
     #partial switch p in slot {
     case common.Player:
       rl.DrawRectanglePro(
@@ -205,6 +222,21 @@ connected :: proc() {
         1,
         rl.WHITE,
       )
+      msg_entry := player_messages[idx]
+      if msg_entry.msg != "" {
+        age := rl.GetTime() - msg_entry.timestamp
+        if age < 5.0 {
+          text := msg_entry.msg
+          ctext := strings.clone_to_cstring(text, context.temp_allocator)
+          text_width := rl.MeasureText(ctext, 16)
+          text_x := p.position.x - f32(text_width) / 2
+          text_y := p.position.y - half_size - 12
+          rl.DrawText(ctext, i32(text_x), i32(text_y), 16, rl.WHITE)
+        } else {
+          delete(msg_entry.msg)
+          player_messages[idx] = {}
+        }
+      }
     }
   }
 

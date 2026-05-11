@@ -48,19 +48,26 @@ main :: proc() {
   event: enet.Event
 
   /*
-        A good way is;
-        Fixed tick rate
-        But accumulate time and only tick as many frames as time has actually been accumulated
-    */
+    Fixed tick rate
+    Accumulate time and only tick as many frames as time has actually been accumulated
+  */
   TICK_RATE :: 100 // Frequency in Hertz at which a game server updates the game state
   DT :: 1 * time.Second / TICK_RATE
   fmt.println(DT)
   tick := time.tick_now()
   accumulator: time.Duration = DT
 
+  last_review := time.now()
+
   game: Game
 
   for {
+    defer if time.since(last_review) >= 10 * time.Second {
+      fmt.println("Check for allocations")
+      common.check_tracking_allocators(&track, &temp_track)
+      last_review = time.now()
+    }
+
     defer free_all(context.temp_allocator)
     // Handle inputs
     handle_incoming_events(server, &game, &event)
