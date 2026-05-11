@@ -1,5 +1,17 @@
 # odin-enet-tutorial
 
+When you are on linux, you need to install
+
+Debian:
+```
+sudo apt-get update
+sudo apt-get install libenet-dev
+```
+Fedora:
+```
+sudo dnf install enet-devel
+```
+
 Knowledge is gathered from
 
 - https://github.com/lsalzman/enet

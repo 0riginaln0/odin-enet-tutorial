@@ -29,7 +29,7 @@ main :: proc() {
 
         #partial switch event.type {
         case .CONNECT:
-            // Only the "peer" field of the event structure is valid for this event
+            // Only the "peer" and "data" fields of the event structure is valid for this event
             // and contains the newly connected peer.
             fmt.printfln(
                 "New client connected from %s",
@@ -47,7 +47,7 @@ main :: proc() {
             )
             enet.packet_destroy(event.packet)
         case .DISCONNECT:
-            // Only the "peer" field of the event structure is valid for this event
+            // Only the "peer" and "data" fields of the event structure is valid for this event
             fmt.printfln(
                 "peer %s either explicitly disconnected or timed out",
                 common.format_enet_address(event.peer.address),
