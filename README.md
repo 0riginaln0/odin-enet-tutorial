@@ -1,6 +1,6 @@
 # odin-enet-tutorial
 
-This is a repository where I teached myself step by step how to use ENet library.
+This is a repository where I teach myself step by step how to use ENet library.
 
 If you have any improvements, suggestions and so on, issues and PRs are welcome.
 
