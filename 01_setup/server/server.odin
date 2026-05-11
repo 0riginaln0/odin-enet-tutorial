@@ -32,8 +32,9 @@ main :: proc() {
             // Only the "peer" and "data" fields of the event structure is valid for this event
             // and contains the newly connected peer.
             fmt.printfln(
-                "New client connected from %s",
+                "New client connected from %s. With data %d",
                 common.format_enet_address(event.peer.address),
+                event.data
             )
         case .RECEIVE:
             // The packet contained in the "packet" field must be destroyed

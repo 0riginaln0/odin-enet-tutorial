@@ -25,7 +25,7 @@ main :: proc() {
     enet.address_set_host(&address, "127.0.0.1")
     address.port = 27585
 
-    peer: ^enet.Peer = enet.host_connect(client, &address, CHANNEL_LIMIT, 0)
+    peer: ^enet.Peer = enet.host_connect(client, &address, CHANNEL_LIMIT, 69)
     if peer == nil {
         fmt.println("Failed to initiate a connection to a foreign host")
         return
@@ -33,8 +33,6 @@ main :: proc() {
 
     event: enet.Event
     if enet.host_service(client, &event, 5000) > 0 && event.type == .CONNECT {
-        // Only the "peer" field of the event structure is valid for this event
-        // and contains the newly connected peer.
         fmt.printfln("Connection to %s succeed", common.format_enet_address(address))
     } else {
         enet.peer_reset(peer)
